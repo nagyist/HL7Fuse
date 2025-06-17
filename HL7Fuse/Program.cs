@@ -39,7 +39,9 @@ namespace HL7Fuse
     {
         private static Dictionary<string, ControlCommand> m_CommandHandlers = new Dictionary<string, ControlCommand>((IEqualityComparer<string>)StringComparer.OrdinalIgnoreCase);
         private static bool setConsoleColor;
-        private static System.String _strPathNetCoreForSharedComponent;
+        private static System.String _strPathMicrosoftAspNetCoreApp;
+        private static System.String _strPathMicrosoftNetCoreApp;
+        private static System.String _strPathMicrosoftWindowsDesktopApp;
         static Program()
         {
         }
@@ -53,8 +55,12 @@ namespace HL7Fuse
                 var dirs = Directory.GetDirectories(AppDomain.CurrentDomain.BaseDirectory).Concat(Directory.GetDirectories(Directory.GetCurrentDirectory())).ToList();
                 dirs.Insert(0, Directory.GetCurrentDirectory());
                 dirs.Insert(0, AppDomain.CurrentDomain.BaseDirectory);
-                if (!System.String.IsNullOrEmpty(_strPathNetCoreForSharedComponent))
-                    dirs.Insert(0, _strPathNetCoreForSharedComponent);
+                if (!System.String.IsNullOrEmpty(_strPathMicrosoftAspNetCoreApp))
+                    dirs.Insert(0, _strPathMicrosoftAspNetCoreApp);
+                if (!System.String.IsNullOrEmpty(_strPathMicrosoftNetCoreApp))
+                    dirs.Insert(0, _strPathMicrosoftNetCoreApp);
+                if (!System.String.IsNullOrEmpty(_strPathMicrosoftWindowsDesktopApp))
+                    dirs.Insert(0, _strPathMicrosoftWindowsDesktopApp);
                 AssemblyName assCurrent = new AssemblyName(asm.Name);
                 Logger.Debug($"HL7Fuse.AssemblyResolve -> Assembly to Load {assCurrent.Name}");
                 foreach (var p in dirs.Select(i => Path.Combine(i, new AssemblyName(asm.Name).Name + ".dll")).Where(i => File.Exists(i)))
@@ -83,12 +89,12 @@ namespace HL7Fuse
             //String serviceName = ConfigurationManager.AppSettings["ServiceName"];
 #endif
             Logger.Debug($"HL7Fuse.AssemblyResolve->Assembly GetCurrentProcess:{Process.GetCurrentProcess().MainModule.FileName}");
-            _strPathNetCoreForSharedComponent = @$"{System.IO.Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)}\Shared\Microsoft.AspNetCore.App\{Environment.Version.ToString()}";
-            Logger.Debug($"HL7Fuse.AssemblyResolve->Assembly PathNetCoreForSharedComponent:{_strPathNetCoreForSharedComponent}");
-            if (!System.IO.Directory.Exists(_strPathNetCoreForSharedComponent))
-                _strPathNetCoreForSharedComponent = @$"{Environment.ExpandEnvironmentVariables("%ProgramW6432%")}\DotNet\Shared\Microsoft.AspNetCore.App\{Environment.Version.ToString()}";
-            if (!System.IO.Directory.Exists(_strPathNetCoreForSharedComponent))
-                _strPathNetCoreForSharedComponent = null;
+            _strPathMicrosoftAspNetCoreApp = GetNetPath("AspNetCore");
+            _strPathMicrosoftNetCoreApp = GetNetPath("NetCore");
+            _strPathMicrosoftWindowsDesktopApp = GetNetPath("WindowsDesktop");
+            Logger.Debug($"HL7Fuse.AssemblyResolve->Assembly PathMicrosoftAspNetCoreApp:{_strPathMicrosoftAspNetCoreApp}");
+            Logger.Debug($"HL7Fuse.AssemblyResolve->Assembly PathMicrosoftNetCoreApp:{_strPathMicrosoftNetCoreApp}");
+            Logger.Debug($"HL7Fuse.AssemblyResolve->Assembly PathMicrosoftWindowsDesktopApp:{_strPathMicrosoftWindowsDesktopApp}");
             if (SuperSocket.Common.Platform.IsMono && (int)Path.DirectorySeparatorChar == 47)
                 Program.ChangeScriptExecutable();
             if (!SuperSocket.Common.Platform.IsMono && !Environment.UserInteractive || SuperSocket.Common.Platform.IsMono && !AppDomain.CurrentDomain.FriendlyName.Equals(Path.GetFileName(Assembly.GetEntryAssembly().CodeBase)))
@@ -149,7 +155,15 @@ namespace HL7Fuse
                 }
             }
         }
-
+        private static System.String GetNetPath(System.String strKeyword)
+        {
+            System.String strPath = @$"{System.IO.Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)}\Shared\Microsoft.{strKeyword}.App\{Environment.Version.ToString()}";
+            if (!System.IO.Directory.Exists(strPath))
+                strPath = @$"{Environment.ExpandEnvironmentVariables("%ProgramW6432%")}\DotNet\Shared\Microsoft.{strKeyword}.App\{Environment.Version.ToString()}";
+            if (!System.IO.Directory.Exists(strPath))
+                strPath = null;
+            return strPath;
+        }
         private static void ChangeScriptExecutable()
         {
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "supersocket.sh");
